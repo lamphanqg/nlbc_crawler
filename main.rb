@@ -10,11 +10,17 @@ class Crawler
   def initialize
     @agent = Mechanize.new
     @ids = read_ids_from_csv(INPUT_CSV_NAME)
+    @logger = Logger.new("logfile.log", 10, 1024000)
     write_header_to_csv
   end
 
   def crawl
-    @ids.each { |id| crawl_one(id) }
+    begin
+      @ids.each { |id| crawl_one(id) }
+    rescue => e
+      @logger.error(e.to_s)
+      @logger.error(e.backtrace.join("\n"))
+    end
   end
 
   private
@@ -22,21 +28,27 @@ class Crawler
       CSV.read(file_name).flatten
     end
 
-    def process_tags(tags)
-      tag_id = tags[6].text.strip
-      import_date = tags[7].text.strip
-      dob = tags[11].text.strip
+    def process_tags(id, tags)
+      tag_id = id
+      return write_unknown(id) if tags.empty?
+
+      import_date = tag_to_text(tags[7])
+      dob = tag_to_text(tags[11])
 
       tags[19..-1].each_slice(6) do |row|
-        transfer = row[1].text.strip
-        transfer_date = row[2].text.strip
-        prefecture = row[3].text.strip
-        city = row[4].text.strip
-        location = row[5].text.strip
+        transfer = tag_to_text(row[1])
+        transfer_date = tag_to_text(row[2])
+        prefecture = tag_to_text(row[3])
+        city = tag_to_text(row[4])
+        location = tag_to_text(row[5])
         write_to_csv(tag_id, import_date, dob,
                      transfer, transfer_date,
                      prefecture, city, location)
       end
+    end
+
+    def tag_to_text(tag)
+      tag.text.strip rescue "Unknown"
     end
 
     def crawl_one(id)
@@ -46,8 +58,8 @@ class Crawler
       input_form = input_page.form("frmSearch")
       input_form.txtIDNO = "#{id}"
       result_page = @agent.submit(input_form, input_form.buttons.first)
-      tags = result_page.search(".resultTable")
-      process_tags(tags)
+      tags = result_page.search(".resultTable") || []
+      process_tags(id, tags)
     end
 
     def write_header_to_csv
@@ -59,6 +71,12 @@ class Crawler
     def write_to_csv(tag_id, import_date, dob, transfer, transfer_date, prefecture, city, location)
       CSV.open(OUTPUT_CSV_NAME, "a") do |csv|
         csv << [tag_id, import_date, dob, transfer, transfer_date, prefecture, city, location]
+      end
+    end
+
+    def write_unknown(id)
+      CSV.open(OUTPUT_CSV_NAME, "a") do |csv|
+        csv << Array.new(7, "Unknown").unshift(id)
       end
     end
 end
