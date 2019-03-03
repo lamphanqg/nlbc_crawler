@@ -64,8 +64,12 @@ class Crawler
     end
 
     def write_header_to_csv
-      CSV.open(OUTPUT_CSV_NAME, "w") do |csv|
+      bom = %w(EF BB BF).map { |e| e.hex.chr }.join
+      csv_file = CSV.generate(bom) do |csv|
         csv << ["Tag", "Import date", "DOB", "Transfer", "Transfer Date", "Prefecture", "City", "Location"]
+      end
+      File.open(OUTPUT_CSV_NAME,"w") do |file|
+        file.write(csv_file)
       end
     end
 
