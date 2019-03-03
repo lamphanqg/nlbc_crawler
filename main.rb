@@ -3,6 +3,7 @@
 require "mechanize"
 require "date"
 require "csv"
+ENV["SSL_CERT_FILE"] = "./cacert.pem"
 
 class Crawler
   INPUT_CSV_NAME = "JPTag_input.csv"
