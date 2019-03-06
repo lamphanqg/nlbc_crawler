@@ -17,7 +17,10 @@ class Crawler
 
   def crawl
     begin
+      start_time = Time.now
       @ids.each { |id| crawl_one(id) }
+      end_time = Time.now
+      @logger.info("Total time: #{end_time - start_time}s")
     rescue => e
       @logger.error(e.to_s)
       @logger.error(e.backtrace.join("\n"))
@@ -53,6 +56,7 @@ class Crawler
     end
 
     def crawl_one(id)
+      puts "Crawling id #{id}..."
       agree_page = @agent.get("https://www.id.nlbc.go.jp/CattleSearch/search/agreement.action")
       agree_form = agree_page.form("agreement")
       input_page = @agent.submit(agree_form, agree_form.buttons.first)
@@ -87,4 +91,6 @@ class Crawler
 end
 
 crawler = Crawler.new
+puts "Start crawling..."
 crawler.crawl
+puts "Finished crawling"
