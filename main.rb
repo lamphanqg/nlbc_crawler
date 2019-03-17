@@ -37,7 +37,7 @@ class Crawler
     def process_tags(id, tags)
       tag_id = id
       if tags.empty? || tags.size < 20
-        @logger.info("ID #{id}'s tags: #{tags}")
+        @logger.info("ID #{id}'s tags: #{tags.map{ |tag| tag_to_text(tag) }.join(",")}")
         return write_unknown(id)
       end
 
