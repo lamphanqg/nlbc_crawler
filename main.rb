@@ -65,12 +65,23 @@ class Crawler
     end
 
     def crawl_one(id)
-      puts "Crawling id #{id}..."
-      input_form = @input_page.form("frmSearch")
-      input_form.txtIDNO = "#{id}"
-      @input_page = result_page = @agent.submit(input_form, input_form.buttons.first)
-      tags = result_page.search(".resultTable") || []
-      process_tags(id, tags)
+      retries = 0
+      begin
+        puts "Crawling id #{id}..."
+        input_form = @input_page.form("frmSearch")
+        input_form.txtIDNO = "#{id}"
+        @input_page = result_page = @agent.submit(input_form, input_form.buttons.first)
+        tags = result_page.search(".resultTable") || []
+        process_tags(id, tags)
+      rescue => e
+        if (retries += 1) <= 3
+          puts "Error #{e}. Retry."
+          retry
+        else
+          puts "Error #{e}. Give up."
+          @logger.error("ID #{id}: Retried 3 times, still failed with error #{e}.")
+        end
+      end
     end
 
     def write_header_to_csv
