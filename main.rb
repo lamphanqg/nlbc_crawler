@@ -17,6 +17,9 @@ class Crawler
   def crawl
     begin
       start_time = Time.now
+      agree_page = @agent.get("https://www.id.nlbc.go.jp/CattleSearch/search/agreement.action")
+      agree_form = agree_page.form("agreement")
+      @input_page = @agent.submit(agree_form, agree_form.buttons.first)
       @ids.each { |id| crawl_one(id) }
       end_time = Time.now
       @logger.info("Total time: #{end_time - start_time}s")
@@ -59,12 +62,9 @@ class Crawler
 
     def crawl_one(id)
       puts "Crawling id #{id}..."
-      agree_page = @agent.get("https://www.id.nlbc.go.jp/CattleSearch/search/agreement.action")
-      agree_form = agree_page.form("agreement")
-      input_page = @agent.submit(agree_form, agree_form.buttons.first)
-      input_form = input_page.form("frmSearch")
+      input_form = @input_page.form("frmSearch")
       input_form.txtIDNO = "#{id}"
-      result_page = @agent.submit(input_form, input_form.buttons.first)
+      @input_page = result_page = @agent.submit(input_form, input_form.buttons.first)
       tags = result_page.search(".resultTable") || []
       process_tags(id, tags)
     end
