@@ -45,7 +45,10 @@ GEM
       rainbow (>= 2.2.2, < 4.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (~> 1.4.0)
+    ruby-ole (1.2.12.2)
     ruby-progressbar (1.10.0)
+    spreadsheet (1.2.3)
+      ruby-ole (>= 1.0)
     unf (0.1.4)
       unf_ext
     unf_ext (0.0.7.5)
@@ -60,6 +63,7 @@ PLATFORMS
 DEPENDENCIES
   mechanize
   rubocop
+  spreadsheet
 
 BUNDLED WITH
    2.0.1
