@@ -2,11 +2,14 @@
 require "mechanize"
 require "date"
 require "csv"
+require "spreadsheet"
 ENV["SSL_CERT_FILE"] = "./cacert.pem"
 
 class Crawler
   INPUT_CSV_NAME = "JPTag_input.csv"
   OUTPUT_CSV_NAME = "JPTag_info_#{Date.today.strftime("%Y_%m_%d")}.csv"
+  OUTPUT_EXCEL = "JPTag_info_#{Date.today.strftime("%Y_%m_%d")}.xls"
+
   def initialize
     @agent = Mechanize.new
     @ids = read_ids_from_csv(INPUT_CSV_NAME)
@@ -21,6 +24,7 @@ class Crawler
       agree_form = agree_page.form("agreement")
       @input_page = @agent.submit(agree_form, agree_form.buttons.first)
       @ids.each { |id| crawl_one(id) }
+      convert_csv_to_xls(OUTPUT_CSV_NAME)
       end_time = Time.now
       @logger.info("Total time: #{end_time - start_time}s")
     rescue => e
@@ -41,12 +45,12 @@ class Crawler
         return write_unknown(id)
       end
 
-      import_date = tag_to_text(tags[7])
-      dob = tag_to_text(tags[11])
+      import_date = tag_to_text(tags[7]).gsub(".", "-")
+      dob = tag_to_text(tags[11]).gsub(".", "-")
 
       tags[19..-1].each_slice(6) do |row|
         transfer = tag_to_text(row[1])
-        transfer_date = tag_to_text(row[2])
+        transfer_date = tag_to_text(row[2]).gsub(".", "-")
         prefecture = tag_to_text(row[3])
         city = tag_to_text(row[4])
         location = tag_to_text(row[5])
@@ -89,6 +93,32 @@ class Crawler
       CSV.open(OUTPUT_CSV_NAME, "a") do |csv|
         csv << Array.new(7, "Unknown").unshift(id)
       end
+    end
+
+    def convert_csv_to_xls(csv_file)
+      Spreadsheet.client_encoding = "UTF-8"
+      book = Spreadsheet::Workbook.new
+      sheet1 = book.create_worksheet
+
+      header_format = Spreadsheet::Format.new(
+        weight: :bold
+      )
+      sheet1.row(0).default_format = header_format
+
+      CSV.open(OUTPUT_CSV_NAME, "r") do |csv|
+        csv.each_with_index do |row, i|
+          # Convert "Import date", "DOB", "Transfer Date" to Date type
+          [1, 2, 4].each do |col|
+            row[col] = Date.parse(row[col]) rescue row[col]
+          end
+          sheet1.row(i).replace(row)
+          date_format = Spreadsheet::Format.new(number_format: "DD/MM/YYYY")
+          sheet1.row(i).set_format(1, date_format)
+          sheet1.row(i).set_format(2, date_format)
+          sheet1.row(i).set_format(4, date_format)
+        end
+      end
+      book.write(OUTPUT_EXCEL)
     end
 end
 
